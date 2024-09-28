@@ -89,6 +89,11 @@ export default function Home() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
+  const formatStartTime = (timestamp: number | null) => {
+    if (!timestamp) return 'Not started';
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   const handleStart = () => {
     if (!currentActivity) return
     setIsRunning(true)
@@ -235,6 +240,9 @@ export default function Home() {
                 />
               </div>
               <div className="text-4xl font-bold text-center">{formatTime(workdayRemainingTime)}</div>
+              <div className="text-center text-sm text-gray-500">
+                Started at: {formatStartTime(workdayStartTime)}
+              </div>
               <div className="flex justify-center space-x-2">
                 <Button onClick={startDay} disabled={isWorkdayActive}>
                   <Play className="mr-2 h-4 w-4" /> Start Day

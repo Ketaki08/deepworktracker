@@ -36,13 +36,17 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ summary: completion.choices[0].message?.content });
-  } catch (error: any) {
-    if (error.response) {
-      console.error(error.response.status, error.response.data);
-      return NextResponse.json({ error: error.response.data }, { status: error.response.status });
-    } else {
+  } catch (error: unknown) {
+    if (error instanceof Error) {
       console.error(`Error with OpenAI API request: ${error.message}`);
       return NextResponse.json({ error: 'An error occurred during your request.' }, { status: 500 });
+    } else if (typeof error === 'object' && error !== null && 'response' in error) {
+      const apiError = error as { response: { status: number; data: unknown } };
+      console.error(apiError.response.status, apiError.response.data);
+      return NextResponse.json({ error: apiError.response.data }, { status: apiError.response.status });
+    } else {
+      console.error('An unexpected error occurred');
+      return NextResponse.json({ error: 'An unexpected error occurred.' }, { status: 500 });
     }
   }
 }
