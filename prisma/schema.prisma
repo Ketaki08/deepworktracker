@@ -1,0 +1,37 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Activity {
+  id          Int      @id @default(autoincrement())
+  type        String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  duration    Int      @default(0) // Automatically calculated in the API
+  timeZone    String?  // Optional: Store timezone information
+  summaryId   Int?
+  summary     DailySummary? @relation(fields: [summaryId], references: [id])
+
+  @@index([type])
+  @@index([startTime])
+}
+
+model DailySummary {
+  id          Int        @id @default(autoincrement())
+  date        DateTime   @default(now())
+  totalHours  Float      @default(0.0)
+  summaryText String?
+  activities  Activity[]
+}

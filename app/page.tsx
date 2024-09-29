@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Play, Pause, Square, Clock, Brain, Coffee, Dumbbell, Briefcase } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useRouter } from 'next/navigation'
 
 type ActivityType = {
   duration: number;
@@ -43,6 +44,7 @@ export default function Home() {
   const [summary, setSummary] = useState<Summary>({});
   const [aiSummary, setAiSummary] = useState<string>("");
   const [isGeneratingAiSummary, setIsGeneratingAiSummary] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -103,16 +105,40 @@ export default function Home() {
     setIsRunning(false)
   }
 
-  const handleStop = () => {
+  const handleStop = async () => {
     setIsRunning(false);
     if (currentActivity && typeof currentActivity === 'object' && !Array.isArray(currentActivity)) {
       const description = prompt("Please enter a description for this activity:") || "";
-      setActivities([...activities, { 
+      const newActivity = { 
         ...currentActivity, 
         duration: elapsedTime,
         description,
         endTime: Date.now() 
-      }]);
+      };
+      setActivities([...activities, newActivity]);
+
+      // Add activity to the database
+      try {
+        const response = await fetch('/api/activities', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newActivity),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to add activity to database');
+        }
+
+        // Optionally, you can update the activity with the ID from the response
+        const savedActivity = await response.json();
+        console.log('Activity saved:', savedActivity);
+      } catch (error) {
+        console.error('Error saving activity:', error);
+        // Handle error (e.g., show an error message to the user)
+      }
+
       setElapsedTime(0);
       setCurrentActivity(null);
     }
@@ -162,9 +188,10 @@ export default function Home() {
     });
 
     setSummary(summaryData);
+    return summaryData; // Return the calculated summary
   };
 
-  const generateAiSummary = async () => {
+  const generateAiSummary = async (calculatedSummary: Summary) => {
     setIsGeneratingAiSummary(true);
     try {
       const response = await fetch('/api/generate-summary', {
@@ -173,8 +200,14 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          summary,
-          activities,
+          summary: calculatedSummary,
+          activities: activities.map(activity => ({
+            type: activity.type,
+            duration: activity.duration,
+            description: activity.description,
+            startTime: activity.startTime,
+            endTime: activity.endTime
+          })),
         }),
       });
 
@@ -184,22 +217,60 @@ export default function Home() {
 
       const data = await response.json();
       setAiSummary(data.summary);
+      return data.summary; // Return the generated summary
     } catch (error) {
       console.error('Error generating AI summary:', error);
-      setAiSummary("Failed to generate AI summary. Please try again.");
+      return "Failed to generate AI summary. Please try again.";
     } finally {
       setIsGeneratingAiSummary(false);
     }
   };
 
-  const endDay = () => {
+  const endDay = async () => {
     setIsWorkdayActive(false);
     setWorkdayRemainingTime(workdayLength);
     setCurrentActivity(null);
     setWorkdayStartTime(null);
-    calculateSummary();
+    
+    const calculatedSummary = calculateSummary();
+    const generatedSummary = await generateAiSummary(calculatedSummary);
+
+    try {
+      const summaryData = {
+        date: new Date(),
+        totalHours: activities.reduce((acc, activity) => acc + activity.duration, 0) / 3600,
+        summaryText: generatedSummary, // Use the generated summary here
+        activities: activities.map(activity => ({
+          type: activity.type,
+          duration: activity.duration,
+          description: activity.description,
+          startTime: new Date(activity.startTime),
+          endTime: new Date(activity.endTime)
+        })),
+      };
+
+      console.log('Sending summary data:', summaryData);
+
+      const response = await fetch('/api/summaries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(summaryData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create daily summary');
+      }
+
+      const savedSummary = await response.json();
+      console.log('Daily summary saved:', savedSummary);
+    } catch (error) {
+      console.error('Error saving daily summary:', error);
+      // Handle error (e.g., show an error message to the user)
+    }
+
     setShowSummary(true);
-    generateAiSummary();
   };
 
   const closeSummary = () => {

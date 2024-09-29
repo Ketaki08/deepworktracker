@@ -7,14 +7,12 @@ const openai = new OpenAI({
 });
 
 export async function POST(req: Request) {
-  if (!configuration.apiKey) {
-    return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 });
-  }
-
-  const body = await req.json();
-  const { summary, activities } = body;
-
   try {
+    const body = await req.json();
+    console.log('Received data for summary generation:', body);
+
+    const { summary, activities } = body;
+
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -35,18 +33,13 @@ export async function POST(req: Request) {
       max_tokens: 300,
     });
 
-    return NextResponse.json({ summary: completion.choices[0].message?.content });
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error(`Error with OpenAI API request: ${error.message}`);
-      return NextResponse.json({ error: 'An error occurred during your request.' }, { status: 500 });
-    } else if (typeof error === 'object' && error !== null && 'response' in error) {
-      const apiError = error as { response: { status: number; data: unknown } };
-      console.error(apiError.response.status, apiError.response.data);
-      return NextResponse.json({ error: apiError.response.data }, { status: apiError.response.status });
-    } else {
-      console.error('An unexpected error occurred');
-      return NextResponse.json({ error: 'An unexpected error occurred.' }, { status: 500 });
-    }
+    const generatedSummary = completion.choices[0].message?.content;
+
+    console.log('Generated summary:', generatedSummary);
+
+    return NextResponse.json({ summary: generatedSummary });
+  } catch (error) {
+    console.error('Error generating summary:', error);
+    return NextResponse.json({ error: 'An error occurred during summary generation.' }, { status: 500 });
   }
 }
