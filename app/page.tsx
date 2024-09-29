@@ -44,7 +44,6 @@ export default function Home() {
   const [summary, setSummary] = useState<Summary>({});
   const [aiSummary, setAiSummary] = useState<string>("");
   const [isGeneratingAiSummary, setIsGeneratingAiSummary] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;

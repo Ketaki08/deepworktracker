@@ -3,6 +3,14 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+interface Activity {
+  type: string;
+  duration: number;
+  description: string;
+  startTime: Date;
+  endTime: Date;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -15,7 +23,7 @@ export async function POST(request: Request) {
         totalHours,
         summaryText,
         activities: {
-          create: activities.map((activity: any) => ({
+          create: activities.map((activity: Activity) => ({
             type: activity.type,
             duration: activity.duration,
             description: activity.description,
