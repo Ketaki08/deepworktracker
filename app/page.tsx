@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Play, Pause, Square, Clock, Brain, Coffee, Dumbbell, Briefcase } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { useRouter } from 'next/navigation'
 
 type ActivityType = {
   duration: number;
